@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./fastapi.db"
     first_superuser_email: Optional[EmailStr] = None
     first_superuser_password: Optional[str] = None
-    secret: str
+    secret: str = 'secret'
 
     class Config:
         env_file = ".env"
