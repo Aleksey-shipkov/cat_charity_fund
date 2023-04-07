@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from alembic import context
 
 from app.core.db import Base
-from app.models import User
 
 load_dotenv('.env')
 
