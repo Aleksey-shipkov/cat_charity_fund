@@ -5,7 +5,9 @@ from app.models.charity_project import CharityProject
 
 
 class CRUDCharityProject(CRUDBase):
-    async def get_obj_by_name(self, name: str, session: AsyncSession):
+    async def get_obj_by_name(
+        self, name: str, session: AsyncSession
+    ) -> CharityProject:
         db_obj = await session.execute(
             select(CharityProject).where(CharityProject.name == name)
         )

@@ -6,19 +6,33 @@ from app.crud.charityproject import charity_project_crud
 from app.models.charity_project import CharityProject
 
 
-async def check_name_duplicate(name, session: AsyncSession) -> None:
+class Error:
+    PROJECT_ALREADY_EXIST = "Проект с таким именем уже существует!"
+    PROJECT_NOT_EXIST = "Проект не существует!"
+    CLOSED_PROJECT_NOT_CHANGEBLE = "Закрытый проект нельзя редактировать!"
+    PROJECT_FULL_AMOUNT_CHANGE = (
+        "Общяя стоимость проекта не может быть изменена в меньшую сторону!"
+    )
+    INVESTED_PROJECT_NOT_DELETED = (
+        "В проект были внесены средства, не подлежит удалению!"
+    )
+
+
+async def check_name_duplicate(name: str, session: AsyncSession) -> None:
     duplicate = await charity_project_crud.get_obj_by_name(name, session)
     if duplicate:
         raise HTTPException(
             HTTPStatus.BAD_REQUEST,
-            "Проект с таким именем уже существует!",
+            Error.PROJECT_ALREADY_EXIST,
         )
 
 
-async def check_project_exist(project_id: int, session: AsyncSession):
+async def check_project_exist(
+    project_id: int, session: AsyncSession
+) -> Optional[CharityProject]:
     project = await charity_project_crud.get(project_id, session)
     if not project:
-        raise HTTPException(HTTPStatus.NOT_FOUND, "Проект не существует!")
+        raise HTTPException(HTTPStatus.NOT_FOUND, Error.PROJECT_NOT_EXIST)
     return project
 
 
@@ -29,26 +43,25 @@ async def check_project_before_edit(
     if project.fully_invested:
         raise HTTPException(
             HTTPStatus.BAD_REQUEST,
-            "Закрытый проект нельзя редактировать!",
+            Error.CLOSED_PROJECT_NOT_CHANGEBLE,
         )
-    if new_full_amount is not None:
-        if new_full_amount < project.invested_amount:
-            raise HTTPException(
-                HTTPStatus.BAD_REQUEST,
-                "Общяя стоимость проекта не может \
-                    быть изменена в меньшую сторону!",
-            )
-    return project
+    if new_full_amount is None:
+        return project
+    if new_full_amount < project.invested_amount:
+        raise HTTPException(
+            HTTPStatus.BAD_REQUEST,
+            Error.PROJECT_FULL_AMOUNT_CHANGE,
+        )
 
 
 async def check_project_before_delete(project: CharityProject) -> None:
     if project.fully_invested:
         raise HTTPException(
             HTTPStatus.BAD_REQUEST,
-            "В проект были внесены средства, не подлежит удалению!",
+            Error.INVESTED_PROJECT_NOT_DELETED,
         )
     if project.invested_amount > 0:
         raise HTTPException(
             HTTPStatus.BAD_REQUEST,
-            "В проект были внесены средства, не подлежит удалению!",
+            Error.INVESTED_PROJECT_NOT_DELETED,
         )

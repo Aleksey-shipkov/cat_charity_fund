@@ -5,6 +5,7 @@ from app.core.db import get_async_session
 from app.crud.charityproject import charity_project_crud
 from app.core.user import current_superuser
 from app.models.donation import Donation
+from app.models.charity_project import CharityProject
 from app.schemas.charityproject import (
     CharityProjectCreate,
     CharityProjectUpdate,
@@ -27,9 +28,10 @@ router = APIRouter()
     response_model=List[CharityProjectDB],
     response_model_exclude={"close_date"},
 )
-async def get_all_projects(session: AsyncSession = Depends(get_async_session)):
-    projects = await charity_project_crud.get_all(session)
-    return projects
+async def get_all_projects(
+    session: AsyncSession = Depends(get_async_session),
+) -> List[CharityProject]:
+    return await charity_project_crud.get_all(session)
 
 
 @router.post(
@@ -41,13 +43,10 @@ async def get_all_projects(session: AsyncSession = Depends(get_async_session)):
 async def create_charity_project(
     project: CharityProjectCreate,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> CharityProject:
     await check_name_duplicate(project.name, session)
     new_project = await charity_project_crud.create(project, session)
-    new_project = await check_uninvested_amounts(
-        Donation, new_project, session
-    )
-    return new_project
+    return await check_uninvested_amounts(Donation, new_project, session)
 
 
 @router.delete(
@@ -57,11 +56,10 @@ async def create_charity_project(
 )
 async def remove_charity_project(
     project_id: int, session: AsyncSession = Depends(get_async_session)
-):
+) -> CharityProject:
     project = await check_project_exist(project_id, session)
     await check_project_before_delete(project)
-    project = await charity_project_crud.remove(project, session)
-    return project
+    return await charity_project_crud.remove(project, session)
 
 
 @router.patch(
@@ -73,7 +71,7 @@ async def update_charity_project(
     project_id: int,
     updated_project: CharityProjectUpdate,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> CharityProject:
     project = await check_project_exist(project_id, session)
     await check_project_before_edit(
         project,
@@ -85,5 +83,5 @@ async def update_charity_project(
         project, updated_project, session
     )
     if updated_project.full_amount is not None:
-        project = await check_uninvested_amounts(Donation, project, session)
+        return await check_uninvested_amounts(Donation, project, session)
     return project
